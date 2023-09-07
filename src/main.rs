@@ -5,9 +5,9 @@ use sqlx::postgres::PgPoolOptions;
 
 mod config;
 mod db;
+mod dtos;
 mod error;
 mod models;
-mod dtos;
 mod utils;
 
 #[derive(Debug, Clone)]

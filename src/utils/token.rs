@@ -26,8 +26,8 @@ pub fn create_token(
   let exp = (now + Duration::minutes(expires_in_seconds)).timestamp() as usize;
   let claims = TokenClaims {
     sub: user_id.to_string(),
-    exp,
     iat,
+    exp,
   };
 
   encode(

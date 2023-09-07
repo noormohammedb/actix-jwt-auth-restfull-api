@@ -1,11 +1,12 @@
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize, Clone, Copy, sqlx::Type, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, Copy, sqlx::Type, PartialEq, Default)]
 #[sqlx(type_name = "user_role", rename_all = "lowercase")]
 pub enum UserRole {
   Admin,
   Moderator,
+  #[default]
   User,
 }
 
@@ -19,7 +20,7 @@ impl UserRole {
   }
 }
 
-#[derive(Debug, Deserialize, Serialize, sqlx::FromRow, sqlx::Type, Clone)]
+#[derive(Debug, Deserialize, Serialize, sqlx::FromRow, sqlx::Type, Clone, Default)]
 pub struct User {
   pub id: uuid::Uuid,
   pub name: String,
