@@ -1,7 +1,10 @@
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use validator::Validate;
 
 use crate::models::User;
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RegisterUserDto {
   pub name: String,
   pub email: String,
@@ -9,16 +12,27 @@ pub struct RegisterUserDto {
   pub password_confirm: String,
 }
 
+#[derive(Validate, Debug, Serialize, Deserialize)]
 pub struct LoginUserDto {
+  #[validate(
+    length(min = 1, message = "Email is required"),
+    email(message = "Email is invalid")
+  )]
   pub email: String,
+  #[validate(
+    length(min = 1, message = "Password is required"),
+    length(min = 6, message = "Password must be at least 6 characters")
+  )]
   pub password: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RequestQueryDto {
   pub page: Option<usize>,
   pub limit: Option<usize>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct FilterUserDto {
   pub id: String,
   pub name: String,
@@ -59,6 +73,7 @@ pub struct UserListResponseDto {
   pub results: usize,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserLoginResponseDto {
   pub status: String,
   pub token: String,

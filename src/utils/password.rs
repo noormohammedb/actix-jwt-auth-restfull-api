@@ -28,6 +28,7 @@ pub fn hash(password: impl Into<String>) -> Result<String, ErrorMessage> {
 }
 
 pub fn compare(password: &str, hashed_password: &str) -> Result<bool, ErrorMessage> {
+  // dbg!(hash(password).unwrap());
   if password.is_empty() {
     return Err(ErrorMessage::EmptyPassword);
   }

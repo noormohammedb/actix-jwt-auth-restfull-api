@@ -9,6 +9,7 @@ mod dtos;
 mod error;
 mod extractors;
 mod models;
+mod scopes;
 mod utils;
 
 #[derive(Debug, Clone)]
@@ -48,6 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     App::new()
       .app_data(web::Data::new(app_state.clone()))
       .wrap(Logger::default())
+      .service(scopes::auth::auth_scope())
       .service(health_check)
   })
   .bind(format!("0.0.0.0:{}", config.port))?
