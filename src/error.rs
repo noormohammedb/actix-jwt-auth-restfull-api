@@ -3,7 +3,7 @@ use std::fmt;
 use actix_web::{HttpResponse, ResponseError};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct ErrorResponse {
   pub status: String,
   pub message: String,

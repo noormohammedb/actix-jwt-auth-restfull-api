@@ -7,6 +7,7 @@ mod config;
 mod db;
 mod dtos;
 mod error;
+mod extractors;
 mod models;
 mod utils;
 
