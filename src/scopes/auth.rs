@@ -7,14 +7,16 @@ use validator::Validate;
 
 use crate::{
   db::UserExt,
-  dtos::{LoginUserDto, UserLoginResponseDto},
+  dtos::{FilterUserDto, LoginUserDto, RegisterUserDto, UserLoginResponseDto},
   error::{ErrorMessage, HttpError},
   utils::{password, token},
   AppState,
 };
 
 pub fn auth_scope() -> Scope {
-  web::scope("/api/auth").route("/login", web::post().to(login))
+  web::scope("/api/auth")
+    .route("/login", web::post().to(login))
+    .route("/register", web::post().to(signup))
 }
 
 pub async fn login(state: web::Data<AppState>, body: web::Json<LoginUserDto>) -> impl Responder {
@@ -63,4 +65,37 @@ pub async fn login(state: web::Data<AppState>, body: web::Json<LoginUserDto>) ->
   }
 
   // Ok::<std::string::String, Box<dyn std::error::Error>>( serde_json::to_string(&body.into_inner()).unwrap_or("login".to_string()))
+}
+
+pub async fn signup(
+  state: web::Data<AppState>,
+  body: web::Json<RegisterUserDto>,
+) -> impl Responder {
+  dbg!(&body);
+
+  let result = state
+    .db_client
+    .get_user(None, None, Some(&body.email))
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+  if body.password != body.password_confirm {
+    Err(HttpError::bad_request(ErrorMessage::WrongCredentials))
+  } else if result.is_some() {
+    Err(HttpError::bad_request(ErrorMessage::EmailExist))
+  } else {
+    let hashed_password = password::hash(&body.password).map_err(|e| HttpError::bad_request(e))?;
+
+    let result = state
+      .db_client
+      .save_user(&body.name, &body.email, &hashed_password)
+      .await
+      .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+    let filterd_user = FilterUserDto::filter_user(&result);
+
+    Ok(HttpResponse::Ok().json(filterd_user))
+
+    // Ok("signup".to_owned())
+  }
 }
