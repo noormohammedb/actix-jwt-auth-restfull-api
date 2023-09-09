@@ -2,13 +2,14 @@ use actix_web::{
   cookie::{time::Duration as ActixWebDuration, Cookie},
   web, HttpResponse, Responder, Scope,
 };
-use futures_util::TryFutureExt;
 use serde_json::json;
 use validator::Validate;
 
 use crate::{
   db::UserExt,
-  dtos::{FilterUserDto, LoginUserDto, RegisterUserDto, UserLoginResponseDto},
+  dtos::{
+    FilterUserDto, LoginUserDto, RegisterUserDto, UserData, UserLoginResponseDto, UserResponseDto,
+  },
   error::{ErrorMessage, HttpError},
   extractors::auth::RequireAuth,
   utils::{password, token},
@@ -18,7 +19,7 @@ use crate::{
 pub fn auth_scope() -> Scope {
   web::scope("/api/auth")
     .route("/login", web::post().to(login))
-    .route("/register", web::post().to(signup))
+    .route("/register", web::post().to(register))
     .route("/logout", web::post().to(logout).wrap(RequireAuth))
 }
 
@@ -70,36 +71,40 @@ pub async fn login(state: web::Data<AppState>, body: web::Json<LoginUserDto>) ->
   // Ok::<std::string::String, Box<dyn std::error::Error>>( serde_json::to_string(&body.into_inner()).unwrap_or("login".to_string()))
 }
 
-pub async fn signup(
+pub async fn register(
   state: web::Data<AppState>,
   body: web::Json<RegisterUserDto>,
 ) -> impl Responder {
-  dbg!(&body);
+  // dbg!(&body);
+  body
+    .validate()
+    .map_err(|e| HttpError::bad_request(e.to_string()))?;
+
+  let hashed_password =
+    password::hash(&body.password).map_err(|e| HttpError::server_error(e.to_string()))?;
 
   let result = state
     .db_client
-    .get_user(None, None, Some(&body.email))
-    .await
-    .map_err(|e| HttpError::server_error(e.to_string()))?;
+    .save_user(&body.name, &body.email, &hashed_password)
+    .await;
 
-  if body.password != body.password_confirm {
-    Err(HttpError::bad_request(ErrorMessage::WrongCredentials))
-  } else if result.is_some() {
-    Err(HttpError::bad_request(ErrorMessage::EmailExist))
-  } else {
-    let hashed_password = password::hash(&body.password).map_err(|e| HttpError::bad_request(e))?;
-
-    let result = state
-      .db_client
-      .save_user(&body.name, &body.email, &hashed_password)
-      .await
-      .map_err(|e| HttpError::server_error(e.to_string()))?;
-
-    let filterd_user = FilterUserDto::filter_user(&result);
-
-    Ok(HttpResponse::Ok().json(filterd_user))
-
-    // Ok("signup".to_owned())
+  match result {
+    Ok(user) => Ok(HttpResponse::Ok().json(UserResponseDto {
+      status: "success".to_owned(),
+      data: UserData {
+        user: FilterUserDto::filter_user(&user),
+      },
+    })),
+    Err(sqlx::Error::Database(db_err)) => {
+      if db_err.is_unique_violation() {
+        Err(HttpError::unique_constraint_voilation(
+          ErrorMessage::EmailExist,
+        ))
+      } else {
+        Err(HttpError::server_error(db_err.to_string()))
+      }
+    }
+    Err(e) => Err(HttpError::server_error(e.to_string())),
   }
 }
 

@@ -4,11 +4,25 @@ use validator::Validate;
 
 use crate::models::User;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Validate, Debug, Serialize, Deserialize)]
 pub struct RegisterUserDto {
+  #[validate(length(min = 1, message = "Name is required"))]
   pub name: String,
+  #[validate(
+    length(min = 1, message = "Email is requied"),
+    email(message = "Email is invalid")
+  )]
   pub email: String,
+  #[validate(
+    length(min = 1, message = "Password is required"),
+    length(min = 6, message = "Password is must be at least 6 character")
+  )]
   pub password: String,
+  #[validate(
+    length(min = 1, message = "Please confirm your password"),
+    must_match(other = "password", message = "Passwords do not match")
+  )]
+  #[serde(rename = "passwordConfirm")]
   pub password_confirm: String,
 }
 
@@ -63,8 +77,15 @@ impl FilterUserDto {
   }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserData {
   pub user: FilterUserDto,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct UserResponseDto {
+  pub status: String,
+  pub data: UserData,
 }
 
 pub struct UserListResponseDto {
