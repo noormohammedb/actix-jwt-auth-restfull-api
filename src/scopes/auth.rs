@@ -3,12 +3,14 @@ use actix_web::{
   web, HttpResponse, Responder, Scope,
 };
 use futures_util::TryFutureExt;
+use serde_json::json;
 use validator::Validate;
 
 use crate::{
   db::UserExt,
   dtos::{FilterUserDto, LoginUserDto, RegisterUserDto, UserLoginResponseDto},
   error::{ErrorMessage, HttpError},
+  extractors::auth::RequireAuth,
   utils::{password, token},
   AppState,
 };
@@ -17,6 +19,7 @@ pub fn auth_scope() -> Scope {
   web::scope("/api/auth")
     .route("/login", web::post().to(login))
     .route("/register", web::post().to(signup))
+    .route("/logout", web::post().to(logout).wrap(RequireAuth))
 }
 
 pub async fn login(state: web::Data<AppState>, body: web::Json<LoginUserDto>) -> impl Responder {
@@ -98,4 +101,16 @@ pub async fn signup(
 
     // Ok("signup".to_owned())
   }
+}
+
+pub async fn logout() -> impl Responder {
+  let cookie = Cookie::build("token", "")
+    .path("/")
+    .max_age(ActixWebDuration::new(-1, 0))
+    .http_only(true)
+    .finish();
+
+  HttpResponse::Ok()
+    .cookie(cookie)
+    .json(json!({"status": "success"}))
 }
