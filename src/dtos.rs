@@ -40,9 +40,11 @@ pub struct LoginUserDto {
   pub password: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Validate, Debug, Serialize, Deserialize)]
 pub struct RequestQueryDto {
+  #[validate(range(min = 1))]
   pub page: Option<usize>,
+  #[validate(range(min = 1, max = 50))]
   pub limit: Option<usize>,
 }
 
@@ -88,6 +90,7 @@ pub struct UserResponseDto {
   pub data: UserData,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UserListResponseDto {
   pub status: String,
   pub users: Vec<FilterUserDto>,

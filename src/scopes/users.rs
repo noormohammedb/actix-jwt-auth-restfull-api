@@ -1,15 +1,20 @@
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder, Scope};
 use serde_json::json;
+use validator::Validate;
 
 use crate::{
-  dtos::{FilterUserDto, UserData, UserResponseDto},
+  db::UserExt,
+  dtos::{FilterUserDto, RequestQueryDto, UserData, UserListResponseDto, UserResponseDto},
   error::HttpError,
-  extractors::auth::RequireAuth,
+  extractors::auth::{RequireAuth, RequireOnlyAdmin},
   models::User,
+  AppState,
 };
 
 pub fn user_scope() -> Scope {
-  web::scope("/api/users").route("/me", web::get().to(get_me).wrap(RequireAuth))
+  web::scope("/api/users")
+    .route("", web::get().to(get_users).wrap(RequireOnlyAdmin))
+    .route("/me", web::get().to(get_me).wrap(RequireAuth))
 }
 
 pub async fn get_me(req: HttpRequest) -> impl Responder {
@@ -27,4 +32,31 @@ pub async fn get_me(req: HttpRequest) -> impl Responder {
     }
     None => Err(HttpError::server_error("User not found")),
   }
+}
+
+pub async fn get_users(
+  state: web::Data<AppState>,
+  query: web::Query<RequestQueryDto>,
+) -> impl Responder {
+  let query = query.into_inner();
+  query
+    .validate()
+    .map_err(|e| HttpError::bad_request(e.to_string()))?;
+
+  let offset = query.page.unwrap_or(1);
+  let limit = query.limit.unwrap_or(10);
+
+  let users = state
+    .db_client
+    .get_users(offset as u32, limit)
+    .await
+    .map_err(|e| HttpError::server_error(e.to_string()))?;
+
+  let response_data = UserListResponseDto {
+    status: "success".to_owned(),
+    results: users.len(),
+    users: FilterUserDto::filter_users(&users),
+  };
+
+  Ok::<HttpResponse, HttpError>(HttpResponse::Ok().json(response_data))
 }
