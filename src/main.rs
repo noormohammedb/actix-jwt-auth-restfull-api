@@ -50,6 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       .app_data(web::Data::new(app_state.clone()))
       .wrap(Logger::default())
       .service(scopes::auth::auth_scope())
+      .service(scopes::users::user_scope())
       .service(health_check)
   })
   .bind(format!("0.0.0.0:{}", config.port))?
