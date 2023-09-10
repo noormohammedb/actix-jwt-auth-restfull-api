@@ -3,6 +3,7 @@ use serde_json::json;
 
 use crate::{
   dtos::{FilterUserDto, UserData, UserResponseDto},
+  error::HttpError,
   extractors::auth::RequireAuth,
   models::User,
 };
@@ -14,15 +15,16 @@ pub fn user_scope() -> Scope {
 pub async fn get_me(req: HttpRequest) -> impl Responder {
   match req.extensions().get::<User>() {
     Some(user) => {
-      dbg!(&user);
-      let res_json = UserResponseDto {
+      let filtered_user = FilterUserDto::filter_user(user);
+
+      let response_data = UserResponseDto {
         status: "success".to_owned(),
         data: UserData {
-          user: FilterUserDto::filter_user(user),
+          user: filtered_user,
         },
       };
-      HttpResponse::Ok().json(res_json)
+      Ok(HttpResponse::Ok().json(response_data))
     }
-    None => HttpResponse::BadRequest().json(json!({"status": "fail"})),
+    None => Err(HttpError::server_error("User not found")),
   }
 }
