@@ -1,5 +1,4 @@
 use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder, Scope};
-use serde_json::json;
 use validator::Validate;
 
 use crate::{

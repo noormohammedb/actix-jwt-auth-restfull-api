@@ -1,4 +1,5 @@
-use actix_web::{get, middleware::Logger, web, App, HttpServer, Responder};
+use actix_cors::Cors;
+use actix_web::{get, http::header, middleware::Logger, web, App, HttpServer, Responder};
 use config::Config;
 use db::DBClient;
 use sqlx::postgres::PgPoolOptions;
@@ -34,6 +35,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .connect(&config.database_url)
     .await?;
 
+  match sqlx::migrate!("./migrations").run(&pool).await {
+    Ok(_) => println!("Migrations executed successfully."),
+    Err(e) => eprintln!("Error executing migrations: {}", e),
+  }
+
   let db_client = DBClient::new(pool);
   let app_state: AppState = AppState {
     env: config.clone(),
@@ -46,8 +52,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   );
 
   HttpServer::new(move || {
+    let cors = Cors::default()
+      .allowed_origin("http://localhost:3000")
+      .allowed_origin("http://localhost:8000")
+      .allowed_origin("http://localhost:8080")
+      .allowed_methods(vec!["GET", "POST"])
+      .allowed_headers(vec![
+        header::CONTENT_TYPE,
+        header::AUTHORIZATION,
+        header::ACCEPT,
+      ])
+      .supports_credentials();
     App::new()
       .app_data(web::Data::new(app_state.clone()))
+      .wrap(cors)
       .wrap(Logger::default())
       .service(scopes::auth::auth_scope())
       .service(scopes::users::user_scope())
