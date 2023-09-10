@@ -37,14 +37,14 @@ pub async fn get_me(req: HttpRequest) -> impl Responder {
 pub async fn get_users(
   state: web::Data<AppState>,
   query: web::Query<RequestQueryDto>,
-) -> impl Responder {
-  let query = query.into_inner();
-  query
+) -> Result<HttpResponse, HttpError> {
+  let query_params = query.into_inner();
+  query_params
     .validate()
     .map_err(|e| HttpError::bad_request(e.to_string()))?;
 
-  let offset = query.page.unwrap_or(1);
-  let limit = query.limit.unwrap_or(10);
+  let offset = query_params.page.unwrap_or(1);
+  let limit = query_params.limit.unwrap_or(10);
 
   let users = state
     .db_client
@@ -58,5 +58,5 @@ pub async fn get_users(
     users: FilterUserDto::filter_users(&users),
   };
 
-  Ok::<HttpResponse, HttpError>(HttpResponse::Ok().json(response_data))
+  Ok(HttpResponse::Ok().json(response_data))
 }
